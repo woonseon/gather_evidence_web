@@ -2,6 +2,8 @@ from PyQt4 import QtCore, QtGui, QtWebKit
 import sys
 import datetime
 import piexif
+import pymysql
+import hashlib
 
 today = str(datetime.datetime.now())
 
@@ -81,10 +83,18 @@ class Browser(QtGui.QMainWindow):
             self.html.page().mainFrame().render(painter)
             painter.end()
 
-            file_name = self.url_name + '_' + today + '_total.jpg'
-            print file_name
+            file_name = str(self.url_name + '_' + today + '_total.jpg')
+
             image.save(file_name)
             
+            openFile = open(file_name)
+            readFile = openFile.read()
+            md5Hash = hashlib.md5(readFile)
+            md5Hashed = md5Hash.hexdigest()
+            sha1Hash = hashlib.sha1(readFile)
+            sha1Hashed = sha1Hash.hexdigest()
+            self.db_con(file_name, md5Hashed, sha1Hashed)
+
             QtGui.QMessageBox.about(self, "Success", "Save Full Screen!!")
         except:
             QtGui.QMessageBox.about(self, "Warning", "Can't save full screen!!")
@@ -99,8 +109,16 @@ class Browser(QtGui.QMainWindow):
             self.html.page().mainFrame().render(painter)
             painter.end()
 
-            file_name = self.url_name + '_' + today + '_current.jpg'
+            file_name = str(self.url_name + '_' + today + '_current.jpg')
             image.save(file_name)
+
+            openFile = open(file_name)
+            readFile = openFile.read()
+            md5Hash = hashlib.md5(readFile)
+            md5Hashed = md5Hash.hexdigest()
+            sha1Hash = hashlib.sha1(readFile)
+            sha1Hashed = sha1Hash.hexdigest()
+            self.db_con(file_name, md5Hashed, sha1Hashed)
             
             QtGui.QMessageBox.about(self, "Success", "Save Current Screen!!")
         except:
@@ -120,6 +138,18 @@ class Browser(QtGui.QMainWindow):
             QtGui.QMessageBox.about(self, "Success", "Save html src!!")
         except:
             QtGui.QMessageBox.about(self, "Warning", "Can't save html src!!")
+    
+    def db_con(self, file_name, input_md, input_sha):
+        conn = pymysql.connect(host='localhost', user='root', password='password', db='evidence', charset='utf8')
+        curs = conn.cursor()
+        print "test"
+        
+        sql = "INSERT INTO get_evidence(time, filename, md5_hash, sha1_hash) VALUES(%s, %s, %s, %s)"
+        curs.execute(sql, (today, file_name, input_md, input_sha))
+        conn.commit()
+        
+        conn.close()
+
 
 if __name__ == '__main__':
     qapp = QtGui.QApplication(sys.argv)
