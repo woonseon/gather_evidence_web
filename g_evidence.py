@@ -1,11 +1,10 @@
 from PyQt4 import QtCore, QtGui, QtWebKit
 import sys
 import datetime
+import pytz
 import piexif
 import pymysql
 import hashlib
-
-today = str(datetime.datetime.now())
 
 class Browser(QtGui.QMainWindow):
     def __init__(self):
@@ -83,17 +82,12 @@ class Browser(QtGui.QMainWindow):
             self.html.page().mainFrame().render(painter)
             painter.end()
 
+            today = self.now_time()
             file_name = str(self.url_name + '_' + today + '_total.jpg')
 
             image.save(file_name)
             
-            openFile = open(file_name)
-            readFile = openFile.read()
-            md5Hash = hashlib.md5(readFile)
-            md5Hashed = md5Hash.hexdigest()
-            sha1Hash = hashlib.sha1(readFile)
-            sha1Hashed = sha1Hash.hexdigest()
-            self.db_con(file_name, md5Hashed, sha1Hashed)
+            self.db_input(file_name)
 
             QtGui.QMessageBox.about(self, "Success", "Save Full Screen!!")
         except:
@@ -109,16 +103,11 @@ class Browser(QtGui.QMainWindow):
             self.html.page().mainFrame().render(painter)
             painter.end()
 
+            today = self.now_time()
             file_name = str(self.url_name + '_' + today + '_current.jpg')
             image.save(file_name)
 
-            openFile = open(file_name)
-            readFile = openFile.read()
-            md5Hash = hashlib.md5(readFile)
-            md5Hashed = md5Hash.hexdigest()
-            sha1Hash = hashlib.sha1(readFile)
-            sha1Hashed = sha1Hash.hexdigest()
-            self.db_con(file_name, md5Hashed, sha1Hashed)
+            self.db_input(file_name)
             
             QtGui.QMessageBox.about(self, "Success", "Save Current Screen!!")
         except:
@@ -131,6 +120,7 @@ class Browser(QtGui.QMainWindow):
             frame = page.mainFrame()
             html_code = unicode(frame.toHtml())
             
+            today = self.now_time()
             file_name = self.url_name + '_' + today + '_src.txt'
             f = open(file_name, 'w')
             f.write(html_code.encode("utf-8"))
@@ -142,14 +132,28 @@ class Browser(QtGui.QMainWindow):
     def db_con(self, file_name, input_md, input_sha):
         conn = pymysql.connect(host='localhost', user='root', password='password', db='evidence', charset='utf8')
         curs = conn.cursor()
-        print "test"
         
+        today = self.now_time()
         sql = "INSERT INTO get_evidence(time, filename, md5_hash, sha1_hash) VALUES(%s, %s, %s, %s)"
         curs.execute(sql, (today, file_name, input_md, input_sha))
         conn.commit()
-        
         conn.close()
 
+    def db_input(self, file_name):
+        openFile = open(file_name)
+        readFile = openFile.read()
+        md5Hash = hashlib.md5(readFile)
+        md5Hashed = md5Hash.hexdigest()
+        sha1Hash = hashlib.sha1(readFile)
+        sha1Hashed = sha1Hash.hexdigest()
+        self.db_con(file_name, md5Hashed, sha1Hashed)
+
+    def now_time(self):
+        fmt = '%Y-%m-%d %H:%M:%S'
+        seoul = pytz.timezone('Asia/Seoul')
+        local_time = seoul.localize(datetime.datetime.now())
+        today = str(local_time.strftime(fmt))
+        return today
 
 if __name__ == '__main__':
     qapp = QtGui.QApplication(sys.argv)
