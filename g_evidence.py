@@ -5,6 +5,7 @@ import pytz
 import piexif
 import pymysql
 import hashlib
+from PIL import Image
 
 class Browser(QtGui.QMainWindow):
     def __init__(self):
@@ -47,7 +48,6 @@ class Browser(QtGui.QMainWindow):
 
         self.html = QtWebKit.QWebView()
         self.html.loadFinished.connect(self.get_html)
-        #self.html.loadFinished.connect(self.render)
         self.gridLayout.addWidget(self.html)
         self.mainLayout.addWidget(self.frame)
         self.setCentralWidget(self.centralwidget)
@@ -88,6 +88,9 @@ class Browser(QtGui.QMainWindow):
             image.save(file_name)
             
             self.db_input(file_name)
+            self.get_src()
+
+            self.add_exif(file_name, today)
 
             QtGui.QMessageBox.about(self, "Success", "Save Full Screen!!")
         except:
@@ -108,6 +111,9 @@ class Browser(QtGui.QMainWindow):
             image.save(file_name)
 
             self.db_input(file_name)
+            self.get_src()
+
+            self.add_exif(file_name, today)
             
             QtGui.QMessageBox.about(self, "Success", "Save Current Screen!!")
         except:
@@ -121,7 +127,7 @@ class Browser(QtGui.QMainWindow):
             html_code = unicode(frame.toHtml())
             
             today = self.now_time()
-            file_name = self.url_name + '_' + today + '_src.txt'
+            file_name = self.url_name + '_' + today + '_src.html'
             f = open(file_name, 'w')
             f.write(html_code.encode("utf-8"))
             f.close()
@@ -149,11 +155,23 @@ class Browser(QtGui.QMainWindow):
         self.db_con(file_name, md5Hashed, sha1Hashed)
 
     def now_time(self):
-        fmt = '%Y-%m-%d %H:%M:%S'
+        fmt = '%Y:%m:%d %H:%M:%S'
         seoul = pytz.timezone('Asia/Seoul')
         local_time = seoul.localize(datetime.datetime.now())
         today = str(local_time.strftime(fmt))
         return today
+
+    def add_exif(self, file_name, today):
+        # exif insert
+        exif_ifd = {piexif.ExifIFD.DateTimeOriginal: today,
+            piexif.ExifIFD.LensMake: u"LensMake",
+            piexif.ExifIFD.Sharpness: 65535,
+            piexif.ExifIFD.LensSpecification: ((1, 1), (1, 1), (1, 1), (1, 1)),
+            }
+
+        exif_dict = {"Exif":exif_ifd}
+        exif_bytes = piexif.dump(exif_dict)
+        piexif.insert(exif_bytes, file_name)
 
 if __name__ == '__main__':
     qapp = QtGui.QApplication(sys.argv)
