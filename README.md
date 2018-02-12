@@ -22,11 +22,13 @@ For gathering web evidence
 
 
 Setup
-        ./setup.sh
+    
+    ./setup.sh
 
 
 
 Usage
-        python g_evdence.py
+    
+    python g_evdence.py
 
     
